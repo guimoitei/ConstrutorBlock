@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-Block Revolution - OBBY MAKER PRO</title>
+    <title>G-Block Revolution - Obby & IA Pro</title>
     
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <script src="https://unpkg.com/@blockly/field-colour"></script>
@@ -12,7 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/TransformControls.js"></script>
-
+    
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
@@ -20,7 +20,7 @@
         * { box-sizing: border-box; }
         body { margin: 0; display: flex; height: 100vh; background: #111; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         
-        /* Painel Esquerdo */
+        /* Layout Principal */
         #left-panel { width: 40%; height: 100%; display: flex; flex-direction: column; border-right: 2px solid #333; }
         #visualizer { width: 60%; height: 100%; position: relative; background: #000; }
         
@@ -32,15 +32,11 @@
         .content-area { flex: 1; display: none; overflow-y: auto; background: #1a1a1a; }
         .content-area.active { display: flex; flex-direction: column; }
 
-        /* Grade de Componentes (Assets) */
+        /* Aba de Componentes */
         .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
         .asset-card { background: #333; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid #444; transition: 0.2s; }
-        .asset-card:hover { border-color: #00e676; background: #3d3d3d; transform: translateY(-2px); }
+        .asset-card:hover { border-color: #00e676; background: #3d3d3d; }
         .asset-card span { display: block; margin-top: 5px; font-size: 14px; }
-
-        /* Lista de Hierarquia */
-        .obj-item { background: #222; padding: 10px; margin: 5px 15px; border-radius: 4px; cursor: pointer; border: 1px solid #333; font-size: 13px; }
-        .obj-item:hover { border-color: #4C97FF; }
 
         /* UI do Palco */
         #ui-layer { position: absolute; top: 15px; right: 15px; z-index: 100; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
@@ -48,9 +44,8 @@
         button { padding: 10px 15px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-green { background: #00e676; color: black; }
         .tool-btn { background: #444; color: white; font-size: 11px; }
-        .tool-btn.active { background: #4C97FF; color: white; }
 
-        #game-hud { position: absolute; top: 20px; left: 20px; color: #00e676; font-weight: bold; font-size: 18px; display: none; text-shadow: 2px 2px #000; }
+        #game-instr { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; color: #00e676; font-size: 12px; border: 1px solid #00e676; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -60,7 +55,6 @@
             <button class="tab-btn active" onclick="switchTab('editor')">Blocos</button>
             <button class="tab-btn" onclick="switchTab('assets')">Componentes</button>
             <button class="tab-btn" onclick="switchTab('objects')">Objetos</button>
-            <button class="tab-btn" onclick="switchTab('community')">Comunidade</button>
         </div>
 
         <div id="tab-editor" class="content-area active">
@@ -70,48 +64,35 @@
         <div id="tab-assets" class="content-area">
             <div class="asset-grid">
                 <div class="asset-card" onclick="spawnAsset('cube', 0x4C97FF, 'Plataforma')">📦 <span>Bloco</span></div>
-                <div class="asset-card" onclick="spawnAsset('sphere', 0xffffff, 'Esfera')">🔮 <span>Esfera</span></div>
-                <div class="asset-card" onclick="spawnAsset('cube', 0xff0000, 'Inimigo')">💀 <span>Inimigo</span></div>
+                <div class="asset-card" onclick="spawnAsset('cube', 0xff0000, 'Inimigo')">💀 <span>Inimigo IA</span></div>
                 <div class="asset-card" onclick="spawnAsset('cylinder', 0xffff00, 'Checkpoint')">🚩 <span>Checkpoint</span></div>
                 <div class="asset-card" onclick="spawnAsset('sphere', 0x00ff00, 'Vitoria')">🏆 <span>Vitória</span></div>
             </div>
         </div>
 
         <div id="tab-objects" class="content-area">
-            <div id="obj-list" style="padding-top: 10px;"></div>
-        </div>
-
-        <div id="tab-community" class="content-area">
-            <div id="game-list" style="padding: 15px;">Conectando ao Firebase...</div>
+            <div id="obj-list" style="padding: 10px;"></div>
         </div>
     </div>
 
     <div id="visualizer">
-        <div id="game-hud">MODO JOGO ATIVO</div>
         <div id="ui-layer">
             <div class="btn-group">
-                <button class="tool-btn active" id="btn-translate" onclick="setGizmoMode('translate')">MOVER</button>
-                <button class="tool-btn" id="btn-rotate" onclick="setGizmoMode('rotate')">GIRAR</button>
-                <button class="tool-btn" id="btn-scale" onclick="setGizmoMode('scale')">ESCALAR</button>
+                <button class="tool-btn" onclick="setGizmoMode('translate')">MOVER</button>
+                <button class="tool-btn" onclick="setGizmoMode('scale')">ESCALAR</button>
             </div>
-            <div class="btn-group">
-                <button class="tool-btn" id="btn-ground" onclick="toggleGround()">CHÃO: LIGADO</button>
-            </div>
-            <button class="btn-green" onclick="runCode()">▶ TESTAR OBBY</button>
+            <button class="btn-green" onclick="runCode()">▶ JOGAR</button>
             <button style="background:#555; color:white" onclick="resetEditor()">🔄 EDITOR</button>
             <button style="background:#ff4444; color:white" onclick="resetWorld()">🗑️ LIMPAR</button>
         </div>
+        <div id="game-instr"><b>WASD</b> para mover | <b>ESPAÇO</b> para pular | <b>ESC</b> p/ Editor</div>
     </div>
 
     <xml id="toolbox" style="display: none">
         <category name="Eventos" colour="#FFD500"><block type="event_when_run"></block></category>
-        <category name="Lógica" colour="#5CA65C"><block type="controls_if"></block></category>
-        <category name="Movimento" colour="#4C97FF">
-            <block type="move_xyz">
-                <value name="X"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
-                <value name="Y"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
-                <value name="Z"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
-            </block>
+        <category name="Construção" colour="#9966FF">
+            <block type="create_cube"></block>
+            <block type="set_color"></block>
         </category>
     </xml>
 
@@ -129,74 +110,97 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- MOTOR 3D (THREE.JS) ---
+        // --- ENGINE 3D ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Céu Azul
+        scene.background = new THREE.Color(0x87CEEB);
         
         const camera = new THREE.PerspectiveCamera(75, (window.innerWidth*0.6)/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth*0.6, window.innerHeight);
         document.getElementById('visualizer').appendChild(renderer.domElement);
 
-        // Chão com Textura de Grama
+        // Chão de Grama
         const grassTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg');
-        grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
-        grassTex.repeat.set(20, 20);
-        const groundGeo = new THREE.PlaneGeometry(100, 100);
-        const groundMat = new THREE.MeshStandardMaterial({ map: grassTex });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
+        grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping; grassTex.repeat.set(20, 20);
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({map: grassTex}));
         ground.rotation.x = -Math.PI / 2;
         scene.add(ground);
 
         scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        const light = new THREE.DirectionalLight(0xffffff, 0.5);
-        light.position.set(10, 20, 10);
-        scene.add(light);
-
         const orbit = new THREE.OrbitControls(camera, renderer.domElement);
-        camera.position.set(12, 12, 12);
+        camera.position.set(10, 10, 10);
 
-        // Gizmos de Edição
         const gizmo = new THREE.TransformControls(camera, renderer.domElement);
         gizmo.addEventListener('dragging-changed', e => orbit.enabled = !e.value);
         scene.add(gizmo);
 
-        // Listas de Objetos
-        let objects = [], enemies = [], checkpoints = [], winItems = [];
-        let player = null, isPlaying = false, spawnPos = new THREE.Vector3(0, 1.5, 0);
+        // Estado do Jogo
+        let objects = [], enemies = [], checkpoints = [], wins = [];
+        let player = null, isPlaying = false, spawnPos = new THREE.Vector3(0, 2, 0);
+        let velocityY = 0, isJumping = false;
         const keys = {};
 
-        window.onkeydown = e => keys[e.key.toLowerCase()] = true;
+        window.onkeydown = e => { 
+            keys[e.key.toLowerCase()] = true; 
+            if(e.code === "Space") jump(); 
+            if(e.key === "Escape") resetEditor();
+        };
         window.onkeyup = e => keys[e.key.toLowerCase()] = false;
 
+        function jump() {
+            if(isPlaying && player && !isJumping) {
+                velocityY = 0.25;
+                isJumping = true;
+            }
+        }
+
+        // --- LOOP DE ANIMAÇÃO ---
         function animate() {
             requestAnimationFrame(animate);
             
             if (isPlaying && player) {
+                // Movimento Lateral
                 const speed = 0.15;
                 if(keys['w']) player.position.z -= speed;
                 if(keys['s']) player.position.z += speed;
                 if(keys['a']) player.position.x -= speed;
                 if(keys['d']) player.position.x += speed;
 
-                // MORTE POR QUEDA NO VAZIO
-                if(player.position.y < -8) {
-                    player.position.copy(spawnPos);
+                // GRAVIDADE
+                velocityY -= 0.012;
+                player.position.y += velocityY;
+
+                // COLISÃO COM CHÃO E OBJETOS
+                let rayOrigin = new THREE.Vector3(player.position.x, player.position.y, player.position.z);
+                const raycaster = new THREE.Raycaster(rayOrigin, new THREE.Vector3(0, -1, 0), 0, 1.1);
+                const intersects = raycaster.intersectObjects([ground, ...objects]);
+
+                if(intersects.length > 0) {
+                    player.position.y = intersects[0].point.y + 1;
+                    velocityY = 0;
+                    isJumping = false;
                 }
 
-                // COLISÕES REAIS (Simplificadas por distância para Obby)
+                // MORTE NO VAZIO (Cair no nada)
+                if(player.position.y < -12) {
+                    player.position.copy(spawnPos);
+                    velocityY = 0;
+                }
+
+                // IA DOS INIMIGOS (PERSEGUIÇÃO)
                 enemies.forEach(en => {
-                    if(player.position.distanceTo(en.position) < 1.3) player.position.copy(spawnPos);
-                });
-                checkpoints.forEach(cp => {
-                    if(player.position.distanceTo(cp.position) < 1.5) spawnPos.copy(cp.position);
-                });
-                winItems.forEach(wi => {
-                    if(player.position.distanceTo(wi.position) < 1.5) {
-                        alert("🎉 VOCÊ VENCEU O OBBY!");
-                        resetEditor();
+                    const dist = en.position.distanceTo(player.position);
+                    if(dist < 15) { // Raio de visão
+                        const dir = new THREE.Vector3().subVectors(player.position, en.position).normalize();
+                        en.position.x += dir.x * 0.05;
+                        en.position.z += dir.z * 0.05;
                     }
+                    if(dist < 1.2) player.position.copy(spawnPos); // Dano/Morte
                 });
+
+                // OUTRAS COLISÕES
+                checkpoints.forEach(cp => { if(player.position.distanceTo(cp.position) < 1.5) spawnPos.copy(cp.position); });
+                wins.forEach(wi => { if(player.position.distanceTo(wi.position) < 1.5) { alert("OBBY CONCLUÍDO!"); resetEditor(); } });
 
                 camera.position.set(player.position.x, player.position.y + 6, player.position.z + 10);
                 camera.lookAt(player.position);
@@ -207,90 +211,70 @@
         }
         animate();
 
-        // --- FUNÇÕES DOS COMPONENTES (ASSETS) ---
+        // --- SISTEMA DE ASSETS E OBJETOS ---
         function spawnAsset(type, col, tag) {
-            let geo;
-            if(type === 'cube') geo = new THREE.BoxGeometry(2, 2, 2);
-            else if(type === 'sphere') geo = new THREE.SphereGeometry(1.2);
-            else geo = new THREE.CylinderGeometry(0.5, 0.5, 3);
-
+            let geo = type === 'cube' ? new THREE.BoxGeometry(2, 2, 2) : (type === 'sphere' ? new THREE.SphereGeometry(1.2) : new THREE.CylinderGeometry(0.5, 0.5, 3));
             const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: col}));
-            mesh.position.set(0, 1, 0);
-            mesh.userData = { name: tag + " " + (objects.length + 1), tag: tag };
+            mesh.position.set(0, 1.5, 0);
+            mesh.userData = { name: tag + " " + (objects.length+1), tag: tag };
             
             scene.add(mesh);
             objects.push(mesh);
-            
             if(tag === 'Inimigo') enemies.push(mesh);
             if(tag === 'Checkpoint') checkpoints.push(mesh);
-            if(tag === 'Vitoria') winItems.push(mesh);
+            if(tag === 'Vitoria') wins.push(mesh);
             
             gizmo.attach(mesh);
             updateObjectList();
         }
 
-        function toggleGround() {
-            ground.visible = !ground.visible;
-            document.getElementById('btn-ground').innerText = ground.visible ? "CHÃO: LIGADO" : "CHÃO: DESLIGADO";
-            document.getElementById('btn-ground').style.background = ground.visible ? "#444" : "#ff4444";
-        }
-
-        function setGizmoMode(mode) {
-            gizmo.setMode(mode);
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('btn-' + mode).classList.add('active');
-        }
-
         function updateObjectList() {
             const list = document.getElementById('obj-list');
-            list.innerHTML = '';
-            objects.forEach((obj, i) => {
-                const div = document.createElement('div');
-                div.className = 'obj-item';
-                div.innerHTML = `<b>${obj.userData.name}</b>`;
-                div.onclick = () => { gizmo.attach(obj); switchTab('objects'); };
-                list.appendChild(div);
-            });
+            list.innerHTML = objects.map((o, i) => `
+                <div class="obj-item" onclick="gizmo.attach(objects[${i}])">${o.userData.name}</div>
+            `).join('');
+        }
+
+        function setGizmoMode(m) { gizmo.setMode(m); }
+
+        function runCode() {
+            isPlaying = true;
+            orbit.enabled = false;
+            gizmo.detach();
+            player = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.8), new THREE.MeshStandardMaterial({color: 0xffffff}));
+            player.position.copy(spawnPos);
+            scene.add(player);
+        }
+
+        function resetEditor() {
+            isPlaying = false; orbit.enabled = true;
+            if(player) scene.remove(player);
+            player = null; velocityY = 0;
         }
 
         function resetWorld() {
             gizmo.detach();
             objects.forEach(o => scene.remove(o));
-            objects = []; enemies = []; checkpoints = []; winItems = [];
+            objects = []; enemies = []; checkpoints = []; wins = [];
             updateObjectList();
         }
 
         // --- BLOCKLY ---
         Blockly.defineBlocksWithJsonArray([
             { "type": "event_when_run", "message0": "🏁 Iniciar Jogo", "nextStatement": null, "colour": 60 },
-            { "type": "move_xyz", "message0": "Mover X:%1 Y:%2 Z:%3", "args0": [
-                {"type":"input_value","name":"X","check":"Number"},
-                {"type":"input_value","name":"Y","check":"Number"},
-                {"type":"input_value","name":"Z","check":"Number"}
-            ], "previousStatement": null, "nextStatement": null, "colour": 210 }
+            { "type": "create_cube", "message0": "📦 Criar Cubo", "previousStatement": null, "nextStatement": null, "colour": 260 },
+            { "type": "set_color", "message0": "Pintar de %1", "args0": [{ "type": "field_colour", "name": "COL", "colour": "#ff0000" }], "previousStatement": null, "nextStatement": null, "colour": 260 }
         ]);
 
+        const generator = Blockly.JavaScript;
+        generator.forBlock['event_when_run'] = () => '';
+        generator.forBlock['create_cube'] = () => 'window.addObj("cube", 0x4C97FF, "Bloco");\n';
+        generator.forBlock['set_color'] = (b) => `window.colorLast("${b.getFieldValue('COL')}");\n`;
+
+        window.addObj = function(t, c, n) { spawnAsset(t, c, n); };
+        window.colorLast = function(c) { if(objects.length) objects[objects.length-1].material.color.set(c); };
+
         const workspace = Blockly.inject('blocklyDiv', { toolbox: document.getElementById('toolbox') });
-
-        function runCode() {
-            isPlaying = true;
-            orbit.enabled = false;
-            gizmo.detach();
-            document.getElementById('game-hud').style.display = 'block';
-            
-            // Criar personagem
-            player = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.6), new THREE.MeshStandardMaterial({color: 0xffffff}));
-            player.position.copy(spawnPos);
-            scene.add(player);
-        }
-
-        function resetEditor() {
-            isPlaying = false;
-            orbit.enabled = true;
-            document.getElementById('game-hud').style.display = 'none';
-            if(player) scene.remove(player);
-            player = null;
-        }
 
         function switchTab(t) {
             document.querySelectorAll('.content-area').forEach(a => a.classList.remove('active'));
@@ -299,20 +283,6 @@
             event.currentTarget.classList.add('active');
             if(t === 'editor') Blockly.svgResize(workspace);
         }
-
-        // Firebase Community Load
-        db.ref('games').on('value', snap => {
-            const list = document.getElementById('game-list');
-            list.innerHTML = '';
-            snap.forEach(c => {
-                const g = c.val();
-                const div = document.createElement('div');
-                div.style.background="#333"; div.style.padding="10px"; div.style.marginBottom="5px"; div.style.borderRadius="5px";
-                div.innerHTML = `<span>${g.name}</span> <button class="btn-green" style="padding:5px;float:right" onclick="alert('Carregando...')">JOGAR</button>`;
-                list.appendChild(div);
-            });
-        });
-
     </script>
 </body>
 </html>
