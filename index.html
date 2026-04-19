@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-Block 3D Revolution - Full Edition</title>
+    <title>G-Block 3D Revolution - Código Íntegro</title>
     
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <script src="https://unpkg.com/blockly/javascript_compressed"></script>
@@ -47,14 +47,13 @@
             border: none; 
             font-weight: bold; 
             text-transform: uppercase;
-            transition: transform 0.1s, background 0.2s;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: 0.2s;
         }
-        button:active { transform: scale(0.95); }
         #runBtn { background: #00e676; color: #003311; }
-        #runBtn:hover { background: #00ff88; }
+        #runBtn:hover { background: #00ff88; transform: scale(1.05); }
         #clearBtn { background: #ff5252; color: white; }
-        #clearBtn:hover { background: #ff1744; }
+        #clearBtn:hover { background: #ff1744; transform: scale(1.05); }
         
         .blocklyTreeLabel { font-size: 16px; padding: 5px; }
     </style>
@@ -145,7 +144,7 @@
     </xml>
 
     <script>
-        // --- 1. CONFIGURAÇÃO DO MOTOR 3D (THREE.JS) ---
+        // --- 1. CONFIGURAÇÃO DO ENGINE 3D ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x111111);
         
@@ -154,31 +153,27 @@
         renderer.setSize(window.innerWidth * 0.45, window.innerHeight);
         document.getElementById('visualizer').appendChild(renderer.domElement);
 
-        // Grade de referência para o chão
-        const grid = new THREE.GridHelper(30, 30, 0x444444, 0x222222);
+        const grid = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
         scene.add(grid);
         
-        // Iluminação
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(10, 20, 10);
         scene.add(directionalLight);
 
-        camera.position.set(12, 12, 12);
+        camera.position.set(8, 8, 8);
         camera.lookAt(0, 0, 0);
 
         let objects = [];
         let lastObj = null;
 
-        // Loop de renderização
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
         }
         animate();
 
-        // --- 2. DEFINIÇÃO DE BLOCOS CUSTOMIZADOS ---
+        // --- 2. DEFINIÇÃO DE TODOS OS BLOCOS ---
         Blockly.defineBlocksWithJsonArray([
             { "type": "event_when_run", "message0": "🏁 Ao clicar em Rodar", "nextStatement": null, "colour": 60 },
             { "type": "create_cube", "message0": "📦 Criar Cubo", "previousStatement": null, "nextStatement": null, "colour": 260 },
@@ -200,7 +195,7 @@
             ], "previousStatement": null, "nextStatement": null, "colour": 160 }
         ]);
 
-        // --- 3. GERADORES DE CÓDIGO (BLOCKLY -> JAVASCRIPT) ---
+        // --- 3. GERADORES DE JAVASCRIPT ---
         const generator = Blockly.JavaScript;
 
         generator['event_when_run'] = function(block) { return ''; };
@@ -232,7 +227,7 @@
             return `window.scaleObj("${dim}", ${val});\n`;
         };
 
-        // --- 4. FUNÇÕES DE SUPORTE NO ESCOPO GLOBAL ---
+        // --- 4. FUNÇÕES DO MOTOR (CONECTADAS AO WINDOW) ---
         window.addObj = function(type) {
             let geo;
             if(type === "cube") geo = new THREE.BoxGeometry(1, 1, 1);
@@ -241,6 +236,7 @@
 
             const mat = new THREE.MeshStandardMaterial({ color: 0x4C97FF });
             const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.y = 0.5; // Faz nascer em cima da grade
             scene.add(mesh);
             objects.push(mesh);
             lastObj = mesh;
@@ -265,12 +261,16 @@
         window.colorObj = function(hex) { if(lastObj) lastObj.material.color.set(hex); };
 
         function clearScene() {
-            objects.forEach(obj => scene.remove(obj));
+            objects.forEach(obj => {
+                obj.geometry.dispose();
+                obj.material.dispose();
+                scene.remove(obj);
+            });
             objects = [];
             lastObj = null;
         }
 
-        // --- 5. INICIALIZAÇÃO DO WORKSPACE ---
+        // --- 5. INICIALIZAÇÃO ---
         const workspace = Blockly.inject('blocklyDiv', {
             toolbox: document.getElementById('toolbox'),
             grid: { spacing: 25, length: 3, colour: '#ccc', snap: true },
@@ -278,7 +278,7 @@
             zoom: { controls: true, wheel: true, startScale: 1.0 }
         });
 
-        // Resolve bug de categorias não abrindo na primeira vez
+        // Resolve bug das abas vazias no carregamento
         setTimeout(() => { Blockly.svgResize(workspace); }, 500);
 
         function runCode() {
@@ -286,7 +286,6 @@
             const code = generator.workspaceToCode(workspace);
             console.log("Executando:\n", code);
             try {
-                // Eval seguro via Function
                 const exec = new Function(code);
                 exec();
             } catch (e) {
@@ -294,7 +293,7 @@
             }
         }
 
-        // Redimensionamento automático
+        // Responsividade
         window.addEventListener('resize', () => {
             const w = window.innerWidth;
             const h = window.innerHeight;
