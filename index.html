@@ -3,123 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-Block Studio Pro - Engine & Modeler</title>
+    <title>G-Block Revolution - OBBY MAKER PRO</title>
     
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <script src="https://unpkg.com/@blockly/field-colour"></script>
     <script src="https://unpkg.com/blockly/javascript_compressed"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/TransformControls.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; display: flex; height: 100vh; background: #111; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         
-        /* Painel Esquerdo com Abas */
+        /* Painel Esquerdo */
         #left-panel { width: 40%; height: 100%; display: flex; flex-direction: column; border-right: 2px solid #333; }
         #visualizer { width: 60%; height: 100%; position: relative; background: #000; }
         
+        /* Abas */
         #tabs { display: flex; background: #222; border-bottom: 2px solid #444; }
-        .tab-btn { padding: 12px; cursor: pointer; background: none; border: none; color: #777; font-weight: bold; flex: 1; }
+        .tab-btn { padding: 12px; cursor: pointer; background: none; border: none; color: #777; font-weight: bold; flex: 1; font-size: 11px; text-transform: uppercase; }
         .tab-btn.active { color: #00e676; border-bottom: 2px solid #00e676; background: #2a2a2a; }
         
-        .content-area { flex: 1; display: none; overflow-y: auto; }
+        .content-area { flex: 1; display: none; overflow-y: auto; background: #1a1a1a; }
         .content-area.active { display: flex; flex-direction: column; }
 
-        /* Outliner (Lista de Objetos) */
-        #outliner { padding: 10px; background: #1a1a1a; }
-        .outliner-item { padding: 8px; margin-bottom: 5px; background: #333; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; }
-        .outliner-item:hover { background: #444; }
-        .outliner-item.selected { border: 1px solid #00e676; background: #224422; }
+        /* Grade de Componentes (Assets) */
+        .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
+        .asset-card { background: #333; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; border: 1px solid #444; transition: 0.2s; }
+        .asset-card:hover { border-color: #00e676; background: #3d3d3d; transform: translateY(-2px); }
+        .asset-card span { display: block; margin-top: 5px; font-size: 14px; }
+
+        /* Lista de Hierarquia */
+        .obj-item { background: #222; padding: 10px; margin: 5px 15px; border-radius: 4px; cursor: pointer; border: 1px solid #333; font-size: 13px; }
+        .obj-item:hover { border-color: #4C97FF; }
 
         /* UI do Palco */
-        #ui-layer { position: absolute; top: 15px; right: 15px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
-        .gizmo-tools { display: flex; gap: 5px; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 5px; }
-        button { padding: 10px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        #ui-layer { position: absolute; top: 15px; right: 15px; z-index: 100; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+        .btn-group { display: flex; gap: 5px; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 5px; }
+        button { padding: 10px 15px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-green { background: #00e676; color: black; }
-        .tool-btn { background: #444; color: white; font-size: 12px; }
-        .tool-btn.active { background: #00e676; color: black; }
+        .tool-btn { background: #444; color: white; font-size: 11px; }
+        .tool-btn.active { background: #4C97FF; color: white; }
 
-        /* Modelador 3D */
-        #modeler-area { padding: 20px; text-align: center; }
-        #modeler-canvas { border: 2px solid #444; background: #222; margin-bottom: 10px; }
+        #game-hud { position: absolute; top: 20px; left: 20px; color: #00e676; font-weight: bold; font-size: 18px; display: none; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
 
     <div id="left-panel">
         <div id="tabs">
-            <button class="tab-btn active" onclick="switchTab('editor')">PROJETO</button>
-            <button class="tab-btn" onclick="switchTab('objects')">HIERARQUIA</button>
-            <button class="tab-btn" onclick="switchTab('modeler')">MODELADOR</button>
-            <button class="tab-btn" onclick="switchTab('community')">COMUNIDADE</button>
+            <button class="tab-btn active" onclick="switchTab('editor')">Blocos</button>
+            <button class="tab-btn" onclick="switchTab('assets')">Componentes</button>
+            <button class="tab-btn" onclick="switchTab('objects')">Objetos</button>
+            <button class="tab-btn" onclick="switchTab('community')">Comunidade</button>
         </div>
 
         <div id="tab-editor" class="content-area active">
             <div id="blocklyDiv" style="height: 100%;"></div>
         </div>
 
-        <div id="tab-objects" class="content-area">
-            <div id="outliner">
-                <h3>Objetos na Cena</h3>
-                <div id="obj-list">Nenhum objeto criado.</div>
+        <div id="tab-assets" class="content-area">
+            <div class="asset-grid">
+                <div class="asset-card" onclick="spawnAsset('cube', 0x4C97FF, 'Plataforma')">📦 <span>Bloco</span></div>
+                <div class="asset-card" onclick="spawnAsset('sphere', 0xffffff, 'Esfera')">🔮 <span>Esfera</span></div>
+                <div class="asset-card" onclick="spawnAsset('cube', 0xff0000, 'Inimigo')">💀 <span>Inimigo</span></div>
+                <div class="asset-card" onclick="spawnAsset('cylinder', 0xffff00, 'Checkpoint')">🚩 <span>Checkpoint</span></div>
+                <div class="asset-card" onclick="spawnAsset('sphere', 0x00ff00, 'Vitoria')">🏆 <span>Vitória</span></div>
             </div>
         </div>
 
-        <div id="tab-modeler" class="content-area">
-            <div id="modeler-area">
-                <h3>Criar Novo Objeto</h3>
-                <p style="font-size: 12px; color: #888;">Em breve: Esculpir em 3D. Por enquanto, configure as dimensões base:</p>
-                <label>Cor do Modelo:</label><br>
-                <input type="color" id="model-color" value="#00ff88"><br><br>
-                <button class="btn-green" onclick="spawnCustomModel()">CRIAR E ADICIONAR AO MUNDO</button>
-            </div>
+        <div id="tab-objects" class="content-area">
+            <div id="obj-list" style="padding-top: 10px;"></div>
         </div>
 
         <div id="tab-community" class="content-area">
-            <div id="game-list" style="padding: 15px;">Carregando...</div>
+            <div id="game-list" style="padding: 15px;">Conectando ao Firebase...</div>
         </div>
     </div>
 
     <div id="visualizer">
+        <div id="game-hud">MODO JOGO ATIVO</div>
         <div id="ui-layer">
-            <div class="gizmo-tools">
-                <button class="tool-btn active" id="btn-move" onclick="setGizmoMode('translate')">MOVER</button>
+            <div class="btn-group">
+                <button class="tool-btn active" id="btn-translate" onclick="setGizmoMode('translate')">MOVER</button>
                 <button class="tool-btn" id="btn-rotate" onclick="setGizmoMode('rotate')">GIRAR</button>
                 <button class="tool-btn" id="btn-scale" onclick="setGizmoMode('scale')">ESCALAR</button>
             </div>
-            <button class="btn-green" onclick="runCode()">▶ JOGAR</button>
-            <button style="background:#4C97FF; color:white" onclick="publishGame()">🌐 PUBLICAR</button>
+            <div class="btn-group">
+                <button class="tool-btn" id="btn-ground" onclick="toggleGround()">CHÃO: LIGADO</button>
+            </div>
+            <button class="btn-green" onclick="runCode()">▶ TESTAR OBBY</button>
+            <button style="background:#555; color:white" onclick="resetEditor()">🔄 EDITOR</button>
             <button style="background:#ff4444; color:white" onclick="resetWorld()">🗑️ LIMPAR</button>
         </div>
     </div>
 
     <xml id="toolbox" style="display: none">
         <category name="Eventos" colour="#FFD500"><block type="event_when_run"></block></category>
-        <category name="Formas" colour="#9966FF">
-            <block type="create_cube"></block>
-            <block type="create_sphere"></block>
-        </category>
-        <category name="Gameplay" colour="#00e676">
-            <block type="spawn_enemy"></block>
-            <block type="spawn_checkpoint"></block>
-        </category>
-        <category name="Transformar" colour="#4C97FF">
+        <category name="Lógica" colour="#5CA65C"><block type="controls_if"></block></category>
+        <category name="Movimento" colour="#4C97FF">
             <block type="move_xyz">
                 <value name="X"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
-                <value name="Y"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                <value name="Y"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
                 <value name="Z"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
             </block>
         </category>
     </xml>
 
     <script>
-        // --- FIREBASE CONFIG ---
+        // --- CONFIGURAÇÃO FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyAqw3mMEc8ZiG9ZKC8R3O5bJ8VQ4d9vwaM",
             authDomain: "gamefriends-fc791.firebaseapp.com",
@@ -132,32 +129,111 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- THREE.JS ENGINE ---
+        // --- MOTOR 3D (THREE.JS) ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x222222);
+        scene.background = new THREE.Color(0x87CEEB); // Céu Azul
+        
         const camera = new THREE.PerspectiveCamera(75, (window.innerWidth*0.6)/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth*0.6, window.innerHeight);
         document.getElementById('visualizer').appendChild(renderer.domElement);
 
-        scene.add(new THREE.GridHelper(50, 50, 0x444444, 0x333333));
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        
-        const orbit = new THREE.OrbitControls(camera, renderer.domElement);
-        camera.position.set(10, 10, 10);
+        // Chão com Textura de Grama
+        const grassTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg');
+        grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
+        grassTex.repeat.set(20, 20);
+        const groundGeo = new THREE.PlaneGeometry(100, 100);
+        const groundMat = new THREE.MeshStandardMaterial({ map: grassTex });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
 
-        // --- GIZMO SYSTEM ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const light = new THREE.DirectionalLight(0xffffff, 0.5);
+        light.position.set(10, 20, 10);
+        scene.add(light);
+
+        const orbit = new THREE.OrbitControls(camera, renderer.domElement);
+        camera.position.set(12, 12, 12);
+
+        // Gizmos de Edição
         const gizmo = new THREE.TransformControls(camera, renderer.domElement);
-        gizmo.addEventListener('dragging-changed', (event) => { orbit.enabled = !event.value; });
+        gizmo.addEventListener('dragging-changed', e => orbit.enabled = !e.value);
         scene.add(gizmo);
 
-        let objects = [], selectedObj = null;
+        // Listas de Objetos
+        let objects = [], enemies = [], checkpoints = [], winItems = [];
+        let player = null, isPlaying = false, spawnPos = new THREE.Vector3(0, 1.5, 0);
+        const keys = {};
+
+        window.onkeydown = e => keys[e.key.toLowerCase()] = true;
+        window.onkeyup = e => keys[e.key.toLowerCase()] = false;
 
         function animate() {
             requestAnimationFrame(animate);
+            
+            if (isPlaying && player) {
+                const speed = 0.15;
+                if(keys['w']) player.position.z -= speed;
+                if(keys['s']) player.position.z += speed;
+                if(keys['a']) player.position.x -= speed;
+                if(keys['d']) player.position.x += speed;
+
+                // MORTE POR QUEDA NO VAZIO
+                if(player.position.y < -8) {
+                    player.position.copy(spawnPos);
+                }
+
+                // COLISÕES REAIS (Simplificadas por distância para Obby)
+                enemies.forEach(en => {
+                    if(player.position.distanceTo(en.position) < 1.3) player.position.copy(spawnPos);
+                });
+                checkpoints.forEach(cp => {
+                    if(player.position.distanceTo(cp.position) < 1.5) spawnPos.copy(cp.position);
+                });
+                winItems.forEach(wi => {
+                    if(player.position.distanceTo(wi.position) < 1.5) {
+                        alert("🎉 VOCÊ VENCEU O OBBY!");
+                        resetEditor();
+                    }
+                });
+
+                camera.position.set(player.position.x, player.position.y + 6, player.position.z + 10);
+                camera.lookAt(player.position);
+            } else {
+                orbit.update();
+            }
             renderer.render(scene, camera);
         }
         animate();
+
+        // --- FUNÇÕES DOS COMPONENTES (ASSETS) ---
+        function spawnAsset(type, col, tag) {
+            let geo;
+            if(type === 'cube') geo = new THREE.BoxGeometry(2, 2, 2);
+            else if(type === 'sphere') geo = new THREE.SphereGeometry(1.2);
+            else geo = new THREE.CylinderGeometry(0.5, 0.5, 3);
+
+            const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: col}));
+            mesh.position.set(0, 1, 0);
+            mesh.userData = { name: tag + " " + (objects.length + 1), tag: tag };
+            
+            scene.add(mesh);
+            objects.push(mesh);
+            
+            if(tag === 'Inimigo') enemies.push(mesh);
+            if(tag === 'Checkpoint') checkpoints.push(mesh);
+            if(tag === 'Vitoria') winItems.push(mesh);
+            
+            gizmo.attach(mesh);
+            updateObjectList();
+        }
+
+        function toggleGround() {
+            ground.visible = !ground.visible;
+            document.getElementById('btn-ground').innerText = ground.visible ? "CHÃO: LIGADO" : "CHÃO: DESLIGADO";
+            document.getElementById('btn-ground').style.background = ground.visible ? "#444" : "#ff4444";
+        }
 
         function setGizmoMode(mode) {
             gizmo.setMode(mode);
@@ -165,77 +241,56 @@
             document.getElementById('btn-' + mode).classList.add('active');
         }
 
-        // --- HIERARQUIA (OUTLINER) ---
-        function updateOutliner() {
+        function updateObjectList() {
             const list = document.getElementById('obj-list');
             list.innerHTML = '';
-            objects.forEach((obj, index) => {
-                const item = document.createElement('div');
-                item.className = 'outliner-item' + (selectedObj === obj ? ' selected' : '');
-                item.innerHTML = `<span>${obj.userData.name}</span><small>${obj.type}</small>`;
-                item.onclick = () => selectObject(obj);
-                list.appendChild(item);
+            objects.forEach((obj, i) => {
+                const div = document.createElement('div');
+                div.className = 'obj-item';
+                div.innerHTML = `<b>${obj.userData.name}</b>`;
+                div.onclick = () => { gizmo.attach(obj); switchTab('objects'); };
+                list.appendChild(div);
             });
         }
-
-        function selectObject(obj) {
-            selectedObj = obj;
-            gizmo.attach(obj);
-            updateOutliner();
-        }
-
-        // --- ENGINE ACTIONS ---
-        window.addObj = function(type, col, name = "Objeto") {
-            let geo = type === "cube" ? new THREE.BoxGeometry(1, 1, 1) : new THREE.SphereGeometry(0.7);
-            let mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: col}));
-            mesh.position.y = 0.5;
-            mesh.userData.name = name + " " + (objects.length + 1);
-            scene.add(mesh);
-            objects.push(mesh);
-            selectObject(mesh);
-            return mesh;
-        };
 
         function resetWorld() {
             gizmo.detach();
             objects.forEach(o => scene.remove(o));
-            objects = [];
-            updateOutliner();
-        }
-
-        // --- MODELADOR ---
-        function spawnCustomModel() {
-            const color = document.getElementById('model-color').value;
-            window.addObj("cube", color, "Meu Modelo");
-            switchTab('objects');
+            objects = []; enemies = []; checkpoints = []; winItems = [];
+            updateObjectList();
         }
 
         // --- BLOCKLY ---
         Blockly.defineBlocksWithJsonArray([
-            { "type": "event_when_run", "message0": "🏁 Ao Iniciar Jogo", "nextStatement": null, "colour": 60 },
-            { "type": "create_cube", "message0": "📦 Criar Cubo", "previousStatement": null, "nextStatement": null, "colour": 260 },
-            { "type": "create_sphere", "message0": "🔮 Criar Esfera", "previousStatement": null, "nextStatement": null, "colour": 260 },
-            { "type": "spawn_enemy", "message0": "💀 Criar Inimigo", "previousStatement": null, "nextStatement": null, "colour": 0 },
-            { "type": "spawn_checkpoint", "message0": "🚩 Criar Checkpoint", "previousStatement": null, "nextStatement": null, "colour": 120 },
+            { "type": "event_when_run", "message0": "🏁 Iniciar Jogo", "nextStatement": null, "colour": 60 },
             { "type": "move_xyz", "message0": "Mover X:%1 Y:%2 Z:%3", "args0": [
-                {"type":"input_value","name":"X"},{"type":"input_value","name":"Y"},{"type":"input_value","name":"Z"}
+                {"type":"input_value","name":"X","check":"Number"},
+                {"type":"input_value","name":"Y","check":"Number"},
+                {"type":"input_value","name":"Z","check":"Number"}
             ], "previousStatement": null, "nextStatement": null, "colour": 210 }
         ]);
 
-        const generator = Blockly.JavaScript;
-        generator.forBlock['event_when_run'] = () => '';
-        generator.forBlock['create_cube'] = () => 'window.addObj("cube", 0x4C97FF);\n';
-        generator.forBlock['create_sphere'] = () => 'window.addObj("sphere", 0x4C97FF);\n';
-        generator.forBlock['spawn_enemy'] = () => 'window.addObj("cube", 0xff0000, "Inimigo");\n';
-        generator.forBlock['spawn_checkpoint'] = () => 'window.addObj("cube", 0xffff00, "Checkpoint");\n';
-        generator.forBlock['move_xyz'] = (b) => {
-            const x = generator.valueToCode(b, 'X', generator.ORDER_ATOMIC) || 0;
-            const y = generator.valueToCode(b, 'Y', generator.ORDER_ATOMIC) || 0;
-            const z = generator.valueToCode(b, 'Z', generator.ORDER_ATOMIC) || 0;
-            return `if(selectedObj) selectedObj.position.set(${x},${y},${z});\n`;
-        };
-
         const workspace = Blockly.inject('blocklyDiv', { toolbox: document.getElementById('toolbox') });
+
+        function runCode() {
+            isPlaying = true;
+            orbit.enabled = false;
+            gizmo.detach();
+            document.getElementById('game-hud').style.display = 'block';
+            
+            // Criar personagem
+            player = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.6), new THREE.MeshStandardMaterial({color: 0xffffff}));
+            player.position.copy(spawnPos);
+            scene.add(player);
+        }
+
+        function resetEditor() {
+            isPlaying = false;
+            orbit.enabled = true;
+            document.getElementById('game-hud').style.display = 'none';
+            if(player) scene.remove(player);
+            player = null;
+        }
 
         function switchTab(t) {
             document.querySelectorAll('.content-area').forEach(a => a.classList.remove('active'));
@@ -245,18 +300,19 @@
             if(t === 'editor') Blockly.svgResize(workspace);
         }
 
-        // --- COMUNIDADE (SIMPLIFICADA) ---
-        function loadCommunity() {
-            db.ref('games').limitToLast(10).on('value', snap => {
-                const list = document.getElementById('game-list');
-                list.innerHTML = '';
-                snap.forEach(c => {
-                    const g = c.val();
-                    list.innerHTML += `<div style="background:#333;margin-bottom:5px;padding:8px;border-radius:4px;">${g.name} <button class="btn-green" style="padding:4px" onclick="alert('Carregando...')">JOGAR</button></div>`;
-                });
+        // Firebase Community Load
+        db.ref('games').on('value', snap => {
+            const list = document.getElementById('game-list');
+            list.innerHTML = '';
+            snap.forEach(c => {
+                const g = c.val();
+                const div = document.createElement('div');
+                div.style.background="#333"; div.style.padding="10px"; div.style.marginBottom="5px"; div.style.borderRadius="5px";
+                div.innerHTML = `<span>${g.name}</span> <button class="btn-green" style="padding:5px;float:right" onclick="alert('Carregando...')">JOGAR</button>`;
+                list.appendChild(div);
             });
-        }
-        loadCommunity();
+        });
+
     </script>
 </body>
 </html>
