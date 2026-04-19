@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-Block 3D Builder</title>
+    <title>G-Block 3D Pro</title>
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <script src="https://unpkg.com/blockly/javascript_compressed"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; display: flex; height: 100vh; background: #222; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #blocklyDiv { width: 50%; height: 100%; border-right: 2px solid #444; }
-        #visualizer { width: 50%; height: 100%; position: relative; }
-        #ui-overlay { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 10px; }
-        button { padding: 10px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; transition: 0.3s; }
-        #runBtn { background: #27ae60; color: white; }
-        #runBtn:hover { background: #2ecc71; }
-        #clearBtn { background: #c0392b; color: white; }
+        body { margin: 0; display: flex; height: 100vh; background: #1e1e1e; color: white; font-family: sans-serif; overflow: hidden; }
+        #blocklyDiv { width: 50%; height: 100%; }
+        #visualizer { width: 50%; height: 100%; position: relative; background: #000; }
+        #ui-overlay { position: absolute; top: 15px; right: 15px; z-index: 100; display: flex; gap: 10px; }
+        button { padding: 12px 24px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        #runBtn { background: #00ff88; color: #003311; }
+        #clearBtn { background: #ff4444; color: white; }
+        .blocklyTreeLabel { font-size: 14px; }
     </style>
 </head>
 <body>
@@ -22,166 +23,174 @@
     <div id="blocklyDiv"></div>
     <div id="visualizer">
         <div id="ui-overlay">
-            <button id="clearBtn" onclick="clearScene()">Limpar Cena</button>
-            <button id="runBtn" onclick="runCode()">▶ Executar</button>
+            <button id="clearBtn" onclick="clearScene()">Limpar</button>
+            <button id="runBtn" onclick="runCode()">▶ RODAR</button>
         </div>
     </div>
 
     <xml id="toolbox" style="display: none">
-        <category name="Formas 3D" colour="#5C81A6">
+        <category name="Eventos" colour="#FFD500">
+            <block type="event_when_run"></block>
+        </category>
+        <category name="Aparência" colour="#9966FF">
             <block type="create_cube"></block>
             <block type="create_sphere"></block>
-            <block type="create_plane"></block>
-        </category>
-        <category name="Movimento" colour="#5CA672">
-            <block type="move_xyz"></block>
-            <block type="rotate_xyz"></block>
-            <block type="scale_obj"></block>
-        </category>
-        <category name="Estilo" colour="#A65C81">
             <block type="set_color"></block>
         </category>
-        <category name="Lógica" colour="#A6725C">
-            <block type="controls_repeat_ext">
-                <value name="TIMES">
-                    <shadow type="math_number">
-                        <field name="NUM">3</field>
-                    </shadow>
-                </value>
-            </block>
-            <block type="math_number"></block>
+        <category name="Movimento" colour="#4C97FF">
+            <block type="move_xyz"></block>
+            <block type="rotate_xyz"></block>
         </category>
+        <category name="Dimensões" colour="#0FBD8C">
+            <block type="set_width"></block>
+            <block type="set_height"></block>
+            <block type="set_depth"></block>
+        </category>
+        <sep></sep>
+        <category name="Controle" colour="#FFAB19">
+            <block type="controls_repeat_ext">
+                <value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
+            </block>
+            <block type="controls_if"></block>
+        </category>
+        <category name="Lógica" colour="#59C059">
+            <block type="logic_compare"></block>
+            <block type="logic_operation"></block>
+            <block type="logic_boolean"></block>
+        </category>
+        <category name="Matemática" colour="#5962C0">
+            <block type="math_number"></block>
+            <block type="math_arithmetic"></block>
+        </category>
+        <category name="Variáveis" colour="#FF8C1A" custom="VARIABLE"></category>
     </xml>
 
     <script>
-        // --- MOTOR 3D (THREE.JS) ---
+        // --- MOTOR 3D ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
         const camera = new THREE.PerspectiveCamera(75, (window.innerWidth/2) / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth / 2, window.innerHeight);
         document.getElementById('visualizer').appendChild(renderer.domElement);
 
-        // Grid e Luzes
-        const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
-        scene.add(gridHelper);
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0xffffff, 0.8);
-        pointLight.position.set(10, 10, 10);
-        scene.add(pointLight);
+        scene.add(new THREE.GridHelper(20, 20, 0x888888, 0x444444));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const light = new THREE.PointLight(0xffffff, 1);
+        light.position.set(10, 10, 10);
+        scene.add(light);
 
-        camera.position.set(10, 10, 10);
+        camera.position.set(8, 8, 8);
         camera.lookAt(0, 0, 0);
 
         let objects = [];
         let lastObj = null;
 
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        }
+        function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
         animate();
 
-        // --- DEFINIÇÃO DOS BLOCOS CUSTOMIZADOS ---
+        // --- DEFINIÇÃO DE BLOCOS CUSTOMIZADOS ---
+        
+        // Evento de Início
+        Blockly.Blocks['event_when_run'] = {
+            init: function() {
+                this.appendDummyInput().appendField("🏁 Ao clicar em Rodar");
+                this.setNextStatement(true, null);
+                this.setColour(60);
+            }
+        };
 
-        // Criar Formas
-        const createBlock = (name, label, color) => {
-            Blockly.Blocks[name] = {
+        // Formas e Aparência
+        const createShapeBlock = (id, txt) => {
+            Blockly.Blocks[id] = {
                 init: function() {
-                    this.appendDummyInput().appendField(label);
+                    this.appendDummyInput().appendField(txt);
+                    this.setPreviousStatement(true, null);
+                    this.setNextStatement(true, null);
+                    this.setColour(260);
+                }
+            };
+        };
+        createShapeBlock('create_cube', '📦 Criar Cubo');
+        createShapeBlock('create_sphere', '🔮 Criar Esfera');
+
+        Blockly.Blocks['set_color'] = {
+            init: function() {
+                this.appendDummyInput().appendField("Cor:")
+                    .appendField(new Blockly.FieldColour("#ff0000"), "COL");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(260);
+            }
+        };
+
+        // Transformações
+        const createTransformBlock = (id, txt, color) => {
+            Blockly.Blocks[id] = {
+                init: function() {
+                    this.appendDummyInput().appendField(txt)
+                        .appendField(new Blockly.FieldNumber(0), "VAL");
                     this.setPreviousStatement(true, null);
                     this.setNextStatement(true, null);
                     this.setColour(color);
                 }
             };
         };
+        createTransformBlock('set_width', 'Largura ⟷', 160);
+        createTransformBlock('set_height', 'Altura ↕', 160);
+        createTransformBlock('set_depth', 'Profundidade ⤢', 160);
 
-        createBlock('create_cube', '📦 Criar Cubo', 160);
-        createBlock('create_sphere', '🔮 Criar Esfera', 160);
-        createBlock('create_plane', '🏁 Criar Chão', 160);
-
-        // Movimento e Transformação
         Blockly.Blocks['move_xyz'] = {
             init: function() {
-                this.appendDummyInput().appendField("Mover p/ X:")
-                    .appendField(new Blockly.FieldNumber(0), "X")
-                    .appendField("Y:")
-                    .appendField(new Blockly.FieldNumber(0), "Y")
-                    .appendField("Z:")
-                    .appendField(new Blockly.FieldNumber(0), "Z");
+                this.appendValueInput("X").setCheck("Number").appendField("Mover X:");
+                this.appendValueInput("Y").setCheck("Number").appendField("Y:");
+                this.appendValueInput("Z").setCheck("Number").appendField("Z:");
                 this.setPreviousStatement(true, null);
                 this.setNextStatement(true, null);
-                this.setColour(120);
+                this.setColour(210);
             }
         };
 
-        Blockly.Blocks['rotate_xyz'] = {
-            init: function() {
-                this.appendDummyInput().appendField("Girar em X:")
-                    .appendField(new Blockly.FieldNumber(0), "X");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour(120);
-            }
+        // --- GERADORES ---
+        const gen = Blockly.JavaScript;
+
+        gen['event_when_run'] = () => ""; // Apenas um marcador visual
+        gen['create_cube'] = () => 'addObj("cube");\n';
+        gen['create_sphere'] = () => 'addObj("sphere");\n';
+        gen['set_color'] = (block) => `colorObj("${block.getFieldValue('COL')}");\n`;
+        
+        gen['set_width'] = (block) => `scaleObj("x", ${block.getFieldValue('VAL')});\n`;
+        gen['set_height'] = (block) => `scaleObj("y", ${block.getFieldValue('VAL')});\n`;
+        gen['set_depth'] = (block) => `scaleObj("z", ${block.getFieldValue('VAL')});\n`;
+
+        gen['move_xyz'] = (block) => {
+            const x = gen.valueToCode(block, 'X', gen.ORDER_ATOMIC) || 0;
+            const y = gen.valueToCode(block, 'Y', gen.ORDER_ATOMIC) || 0;
+            const z = gen.valueToCode(block, 'Z', gen.ORDER_ATOMIC) || 0;
+            return `moveObj(${x}, ${y}, ${z});\n`;
         };
 
-        Blockly.Blocks['set_color'] = {
-            init: function() {
-                this.appendDummyInput().appendField("Pintar de:")
-                    .appendField(new Blockly.FieldColour("#ff0000"), "COL");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour(20);
-            }
-        };
-
-        // --- GERADORES DE CÓDIGO ---
-        const javascriptGenerator = Blockly.JavaScript;
-
-        javascriptGenerator['create_cube'] = () => 'addObj("cube");\n';
-        javascriptGenerator['create_sphere'] = () => 'addObj("sphere");\n';
-        javascriptGenerator['create_plane'] = () => 'addObj("plane");\n';
-
-        javascriptGenerator['move_xyz'] = (block) => {
-            return `moveObj(${block.getFieldValue('X')}, ${block.getFieldValue('Y')}, ${block.getFieldValue('Z')});\n`;
-        };
-
-        javascriptGenerator['rotate_xyz'] = (block) => {
-            return `rotateObj(${block.getFieldValue('X')});\n`;
-        };
-
-        javascriptGenerator['set_color'] = (block) => {
-            return `colorObj("${block.getFieldValue('COL')}");\n`;
-        };
-
-        // --- FUNÇÕES DE EXECUÇÃO DO MUNDO 3D ---
+        // --- FUNÇÕES DE EXECUÇÃO ---
         function addObj(type) {
-            let geo;
-            if(type === "cube") geo = new THREE.BoxGeometry(2, 2, 2);
-            else if(type === "sphere") geo = new THREE.SphereGeometry(1.5, 32, 32);
-            else geo = new THREE.PlaneGeometry(5, 5);
-
-            const mat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+            const geo = type === "cube" ? new THREE.BoxGeometry(1, 1, 1) : new THREE.SphereGeometry(0.7, 32, 32);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x4C97FF });
             const mesh = new THREE.Mesh(geo, mat);
-            if(type === "plane") mesh.rotation.x = -Math.PI / 2;
-            
             scene.add(mesh);
             objects.push(mesh);
             lastObj = mesh;
         }
 
-        function moveObj(x, y, z) {
-            if(lastObj) lastObj.position.set(x, y, z);
+        function moveObj(x, y, z) { if(lastObj) lastObj.position.set(x, y, z); }
+        
+        function scaleObj(axis, val) {
+            if(lastObj) {
+                const s = Math.max(0.1, val);
+                if(axis === "x") lastObj.scale.x = s;
+                if(axis === "y") lastObj.scale.y = s;
+                if(axis === "z") lastObj.scale.z = s;
+            }
         }
 
-        function rotateObj(deg) {
-            if(lastObj) lastObj.rotation.x += deg * (Math.PI / 180);
-        }
-
-        function colorObj(hex) {
-            if(lastObj) lastObj.material.color.set(hex);
-        }
+        function colorObj(hex) { if(lastObj) lastObj.material.color.set(hex); }
 
         function clearScene() {
             objects.forEach(obj => scene.remove(obj));
@@ -192,20 +201,18 @@
         // --- INICIALIZAÇÃO ---
         const workspace = Blockly.inject('blocklyDiv', {
             toolbox: document.getElementById('toolbox'),
-            zoom: { controls: true, wheel: true }
+            grid: { spacing: 20, length: 3, colour: '#333', snap: true },
+            trashcan: true
         });
 
         function runCode() {
             clearScene();
-            const code = javascriptGenerator.workspaceToCode(workspace);
+            const code = gen.workspaceToCode(workspace);
             try {
                 eval(code);
-            } catch (e) {
-                alert("Erro no código: " + e);
-            }
+            } catch (e) { console.error(e); }
         }
 
-        // Responsividade
         window.addEventListener('resize', () => {
             camera.aspect = (window.innerWidth/2) / window.innerHeight;
             camera.updateProjectionMatrix();
