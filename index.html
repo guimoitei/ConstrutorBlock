@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-Block Revolution - Bug Fix Edition</title>
+    <title>G-Block Revolution - Full Gameplay Edition</title>
     
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <script src="https://unpkg.com/@blockly/field-colour"></script>
     <script src="https://unpkg.com/blockly/javascript_compressed"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -20,8 +19,8 @@
         * { box-sizing: border-box; }
         body { margin: 0; display: flex; height: 100vh; background: #111; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         
-        #left-panel { width: 50%; height: 100%; display: flex; flex-direction: column; border-right: 2px solid #333; }
-        #visualizer { width: 50%; height: 100%; position: relative; background: #000; }
+        #left-panel { width: 45%; height: 100%; display: flex; flex-direction: column; border-right: 2px solid #333; }
+        #visualizer { width: 55%; height: 100%; position: relative; background: #000; }
         
         #tabs { display: flex; background: #222; border-bottom: 2px solid #444; }
         .tab-btn { padding: 15px 20px; cursor: pointer; background: none; border: none; color: #777; font-weight: bold; text-transform: uppercase; }
@@ -30,56 +29,66 @@
         #blocklyDiv { flex: 1; width: 100%; }
         #community-div { display: none; padding: 20px; overflow-y: auto; flex: 1; background: #1a1a1a; }
         
-        .game-item { background: #222; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        
-        #ui-layer { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
-        button { padding: 12px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
-        .run-btn { background: #00e676; color: #003311; }
+        #ui-layer { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; text-align: right; }
+        button { padding: 12px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .run-btn { background: #00e676; color: #003311; font-size: 16px; }
         .pub-btn { background: #4C97FF; color: white; }
+        
+        #hud { position: absolute; top: 20px; left: 20px; z-index: 100; pointer-events: none; display: none; }
+        .hp-bar { width: 200px; height: 20px; background: #444; border: 2px solid #fff; border-radius: 10px; overflow: hidden; }
+        #hp-fill { width: 100%; height: 100%; background: #ff4444; transition: 0.3s; }
+        
+        #msg-screen { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 500; text-align: center; }
+        #msg-screen h1 { color: #00e676; font-size: 48px; margin-bottom: 10px; }
 
         #instr { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 13px; color: #00e676; border: 1px solid #00e676; }
     </style>
 </head>
 <body>
 
+    <div id="msg-screen">
+        <h1 id="status-title">VITÓRIA!</h1>
+        <button onclick="resetEditor()">VOLTAR AO EDITOR</button>
+    </div>
+
     <div id="left-panel">
         <div id="tabs">
             <button id="btn-editor" class="tab-btn active" onclick="switchTab('editor')">Projeto</button>
             <button id="btn-community" class="tab-btn" onclick="switchTab('community')">Comunidade</button>
         </div>
-
         <div id="blocklyDiv"></div>
-
         <div id="community-div">
             <h2 style="color: #00e676;">🌍 Jogos da Comunidade</h2>
-            <div id="game-list">Carregando mundos...</div>
+            <div id="game-list">Buscando mundos...</div>
         </div>
     </div>
 
     <div id="visualizer">
+        <div id="hud">
+            <div style="margin-bottom: 5px; font-weight: bold;">VIDA</div>
+            <div class="hp-bar"><div id="hp-fill"></div></div>
+            <div id="weapon-ui" style="margin-top: 10px; color: #4C97FF; font-weight: bold; display: none;">🔫 ARMA EQUIPADA (Clique para Atirar)</div>
+        </div>
+
         <div id="ui-layer">
             <button class="run-btn" onclick="runCode()">▶ JOGAR / TESTAR</button>
             <button class="pub-btn" onclick="publishGame()">🌐 PUBLICAR JOGO</button>
-            <button style="background: #555; color: white;" onclick="resetEditor()">🔄 VOLTAR AO EDITOR</button>
+            <button style="background: #555; color: white;" onclick="resetEditor()">🔄 EDITOR</button>
         </div>
-        <div id="instr"><b>Editor:</b> Mouse para girar. <br><b>Play:</b> WASD para mover.</div>
+        <div id="instr"><b>Play:</b> WASD para mover. <b>Tiro:</b> Clique Mouse.</div>
     </div>
 
     <xml id="toolbox" style="display: none">
-        <category name="Lógica Inicial" colour="#FFD500">
-            <block type="event_when_run"></block>
-        </category>
+        <category name="Início" colour="#FFD500"><block type="event_when_run"></block></category>
         <category name="Construção" colour="#9966FF">
             <block type="create_cube"></block>
             <block type="create_sphere"></block>
             <block type="set_color"></block>
         </category>
-        <category name="Mundo & Itens" colour="#00e676">
+        <category name="Gameplay" colour="#00e676">
             <block type="spawn_enemy"></block>
             <block type="spawn_checkpoint"></block>
             <block type="spawn_victory"></block>
-        </category>
-        <category name="Personagem" colour="#FF6680">
             <block type="give_weapon"></block>
         </category>
         <category name="Posição" colour="#4C97FF">
@@ -90,14 +99,13 @@
             </block>
         </category>
         <sep></sep>
-        <category name="Controle" colour="#FFAB19">
-            <block type="controls_repeat_ext"></block>
-        </category>
+        <category name="Controle" colour="#FFAB19"><block type="controls_repeat_ext"></block></category>
+        <category name="Lógica" colour="#5CA65C"><block type="logic_compare"></block></category>
         <category name="Variáveis" colour="#FF8C1A" custom="VARIABLE"></category>
     </xml>
 
     <script>
-        // --- FIREBASE CONFIG ---
+        // --- 1. FIREBASE SETUP ---
         const firebaseConfig = {
             apiKey: "AIzaSyAqw3mMEc8ZiG9ZKC8R3O5bJ8VQ4d9vwaM",
             authDomain: "gamefriends-fc791.firebaseapp.com",
@@ -110,62 +118,111 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- THREE.JS ENGINE ---
+        // --- 2. THREE.JS ENGINE ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        
-        const camera = new THREE.PerspectiveCamera(75, (window.innerWidth*0.5)/window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, (window.innerWidth*0.55)/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth*0.5, window.innerHeight);
+        renderer.setSize(window.innerWidth*0.55, window.innerHeight);
         document.getElementById('visualizer').appendChild(renderer.domElement);
 
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({color: 0x333333}));
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
-        
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(5, 10, 7);
+        scene.add(new THREE.GridHelper(100, 100, 0x444444, 0x222222));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const light = new THREE.DirectionalLight(0xffffff, 0.8);
+        light.position.set(10, 20, 10);
         scene.add(light);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
         const orbit = new THREE.OrbitControls(camera, renderer.domElement);
-        camera.position.set(10, 10, 10);
+        camera.position.set(15, 15, 15);
 
-        let objects = [];
-        let player = null;
-        let isPlaying = false;
+        // Variaveis de Estado
+        let objects = [], enemies = [], checkpoints = [], winItems = [];
+        let player = null, isPlaying = false, hasWeapon = false;
+        let hp = 100, spawnPos = new THREE.Vector3(0, 1, 0);
         const keys = {};
 
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        window.addEventListener('mousedown', () => { if(isPlaying && hasWeapon) shoot(); });
 
         function animate() {
             requestAnimationFrame(animate);
             if (isPlaying && player) {
+                // Movimento Personagem
                 const speed = 0.15;
                 if(keys['w']) player.position.z -= speed;
                 if(keys['s']) player.position.z += speed;
                 if(keys['a']) player.position.x -= speed;
                 if(keys['d']) player.position.x += speed;
 
-                camera.position.set(player.position.x, player.position.y + 6, player.position.z + 10);
+                // IA dos Inimigos (Perseguição)
+                enemies.forEach(en => {
+                    const dir = new THREE.Vector3().subVectors(player.position, en.position).normalize();
+                    en.position.add(dir.multiplyScalar(0.045));
+                    // Colisão Dano
+                    if(player.position.distanceTo(en.position) < 1.2) {
+                        takeDamage(0.5);
+                    }
+                });
+
+                // Checkpoints
+                checkpoints.forEach(cp => {
+                    if(player.position.distanceTo(cp.position) < 1.5) {
+                        spawnPos.copy(cp.position);
+                        cp.material.color.set(0x00ff00);
+                    }
+                });
+
+                // Vitória
+                winItems.forEach(wi => {
+                    if(player.position.distanceTo(wi.position) < 1.5) {
+                        showScreen("VITÓRIA!");
+                    }
+                });
+
+                camera.position.set(player.position.x, player.position.y + 7, player.position.z + 12);
                 camera.lookAt(player.position);
-            } else {
-                orbit.update();
-            }
+            } else { orbit.update(); }
             renderer.render(scene, camera);
         }
         animate();
 
-        // --- BLOCOS BLOCKLY ---
+        // --- 3. MECÂNICAS ---
+        function takeDamage(amt) {
+            hp -= amt;
+            document.getElementById('hp-fill').style.width = hp + "%";
+            if(hp <= 0) {
+                hp = 100;
+                document.getElementById('hp-fill').style.width = "100%";
+                player.position.copy(spawnPos);
+            }
+        }
+
+        function shoot() {
+            // "Flash" do tiro
+            enemies.forEach((en, idx) => {
+                if(player.position.distanceTo(en.position) < 7) {
+                    scene.remove(en);
+                    enemies.splice(idx, 1);
+                }
+            });
+        }
+
+        function showScreen(txt) {
+            isPlaying = false;
+            document.getElementById('msg-screen').style.display = 'flex';
+            document.getElementById('status-title').innerText = txt;
+        }
+
+        // --- 4. BLOCOS BLOCKLY ---
         Blockly.defineBlocksWithJsonArray([
-            { "type": "event_when_run", "message0": "🏁 Ao Iniciar Jogo", "nextStatement": null, "colour": 60 },
+            { "type": "event_when_run", "message0": "🏁 Iniciar Jogo", "nextStatement": null, "colour": 60 },
             { "type": "create_cube", "message0": "📦 Criar Cubo", "previousStatement": null, "nextStatement": null, "colour": 260 },
             { "type": "create_sphere", "message0": "🔮 Criar Esfera", "previousStatement": null, "nextStatement": null, "colour": 260 },
-            { "type": "spawn_enemy", "message0": "💀 Criar Inimigo", "previousStatement": null, "nextStatement": null, "colour": 0 },
-            { "type": "spawn_checkpoint", "message0": "🚩 Criar Checkpoint", "previousStatement": null, "nextStatement": null, "colour": 120 },
-            { "type": "spawn_victory", "message0": "🏆 Objeto Vitória", "previousStatement": null, "nextStatement": null, "colour": 45 },
-            { "type": "give_weapon", "message0": "🔫 Equipar Arma", "previousStatement": null, "nextStatement": null, "colour": 330 },
+            { "type": "spawn_enemy", "message0": "💀 Inimigo Perseguidor", "previousStatement": null, "nextStatement": null, "colour": 0 },
+            { "type": "spawn_checkpoint", "message0": "🚩 Checkpoint", "previousStatement": null, "nextStatement": null, "colour": 120 },
+            { "type": "spawn_victory", "message0": "🏆 Item de Vitória", "previousStatement": null, "nextStatement": null, "colour": 45 },
+            { "type": "give_weapon", "message0": "🔫 Pegar Arma", "previousStatement": null, "nextStatement": null, "colour": 330 },
             { "type": "set_color", "message0": "Cor %1", "args0": [{"type": "field_colour", "name": "COL", "colour": "#ff0000"}], "previousStatement": null, "nextStatement": null, "colour": 260 },
             { "type": "move_xyz", "message0": "Posição X:%1 Y:%2 Z:%3", "args0": [
                 {"type": "input_value", "name": "X", "check": "Number"},
@@ -176,12 +233,12 @@
 
         const generator = Blockly.JavaScript;
         generator.forBlock['event_when_run'] = () => '';
-        generator.forBlock['create_cube'] = () => 'window.addObj("cube", 0x4C97FF);\n';
-        generator.forBlock['create_sphere'] = () => 'window.addObj("sphere", 0x4C97FF);\n';
+        generator.forBlock['create_cube'] = () => 'window.addObj("cube", 0x4C97FF, "obj");\n';
+        generator.forBlock['create_sphere'] = () => 'window.addObj("sphere", 0x4C97FF, "obj");\n';
         generator.forBlock['spawn_enemy'] = () => 'window.addObj("cube", 0xff0000, "enemy");\n';
-        generator.forBlock['spawn_checkpoint'] = () => 'window.addObj("cylinder", 0xffff00, "checkpoint");\n';
-        generator.forBlock['spawn_victory'] = () => 'window.addObj("sphere", 0x00ff00, "victory");\n';
-        generator.forBlock['give_weapon'] = () => 'console.log("Arma!");\n';
+        generator.forBlock['spawn_checkpoint'] = () => 'window.addObj("cylinder", 0xffff00, "cp");\n';
+        generator.forBlock['spawn_victory'] = () => 'window.addObj("sphere", 0x00ff00, "win");\n';
+        generator.forBlock['give_weapon'] = () => 'window.hasWeapon = true;\n';
         generator.forBlock['set_color'] = (b) => `window.colorLast("${b.getFieldValue('COL')}");\n`;
         generator.forBlock['move_xyz'] = (b) => {
             const x = generator.valueToCode(b, 'X', generator.ORDER_ATOMIC) || 0;
@@ -190,21 +247,23 @@
             return `window.moveLast(${x}, ${y}, ${z});\n`;
         };
 
-        // --- ENGINE LOGIC ---
+        // --- 5. FUNÇÕES ENGINE ---
         window.addObj = function(type, col, tag) {
-            let geo = type === "cube" ? new THREE.BoxGeometry(1.5, 1.5, 1.5) : (type === "sphere" ? new THREE.SphereGeometry(1) : new THREE.CylinderGeometry(0.5, 0.5, 2));
+            let geo = type === "cube" ? new THREE.BoxGeometry(1.5, 1.5, 1.5) : (type === "sphere" ? new THREE.SphereGeometry(1) : new THREE.CylinderGeometry(0.3, 0.3, 2.5));
             let mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: col}));
             mesh.position.y = 0.75;
-            mesh.userData.tag = tag;
             scene.add(mesh);
             objects.push(mesh);
+            if(tag === "enemy") enemies.push(mesh);
+            if(tag === "cp") checkpoints.push(mesh);
+            if(tag === "win") winItems.push(mesh);
         };
         window.moveLast = function(x,y,z) { if(objects.length) objects[objects.length-1].position.set(x,y,z); };
         window.colorLast = function(c) { if(objects.length) objects[objects.length-1].material.color.set(c); };
 
         function clearWorld() {
             objects.forEach(o => scene.remove(o));
-            objects = [];
+            enemies = []; checkpoints = []; winItems = []; objects = [];
             if(player) { scene.remove(player); player = null; }
         }
 
@@ -214,30 +273,41 @@
             clearWorld();
             isPlaying = true;
             orbit.enabled = false;
-            
-            // CORREÇÃO: CapsuleGeometry substituído por CylinderGeometry para compatibilidade r128
-            player = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5, 16), new THREE.MeshStandardMaterial({color: 0xeeeeee}));
-            player.position.set(0, 1, 0);
+            hp = 100; hasWeapon = false; spawnPos.set(0, 1, 0);
+            document.getElementById('hp-fill').style.width = "100%";
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('msg-screen').style.display = 'none';
+
+            player = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5), new THREE.MeshStandardMaterial({color: 0xffffff}));
+            player.position.copy(spawnPos);
             scene.add(player);
 
             if(externalXml) { workspace.clear(); Blockly.Xml.domToWorkspace(externalXml, workspace); }
             const code = generator.workspaceToCode(workspace);
             try { eval(code); } catch(e) { console.error(e); }
+
+            if(window.hasWeapon) {
+                document.getElementById('weapon-ui').style.display = 'block';
+                const g = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 1), new THREE.MeshStandardMaterial({color: 0x333333}));
+                g.position.set(0.6, 0, -0.6);
+                player.add(g);
+            } else { document.getElementById('weapon-ui').style.display = 'none'; }
         }
 
         function resetEditor() {
             isPlaying = false;
             orbit.enabled = true;
-            camera.position.set(10, 10, 10);
-            if(player) { scene.remove(player); player = null; }
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('msg-screen').style.display = 'none';
+            clearWorld();
         }
 
-        // --- COMUNIDADE ---
+        // --- 6. COMUNIDADE FIREBASE ---
         function publishGame() {
             const name = prompt("Nome do jogo:");
             if(!name) return;
-            const xmlText = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace));
-            db.ref('games').push({ name: name, data: xmlText });
+            const xml = Blockly.Xml.workspaceToDom(workspace);
+            db.ref('games').push({ name: name, data: Blockly.Xml.domToText(xml) });
             alert("Publicado!");
         }
 
@@ -248,8 +318,8 @@
                 snap.forEach(child => {
                     const g = child.val();
                     const d = document.createElement('div');
-                    d.className = 'game-item';
-                    d.innerHTML = `<span>${g.name}</span><button onclick="playRemote('${child.key}')">JOGAR</button>`;
+                    d.style.cssText = "background:#222; padding:10px; margin-bottom:10px; border-radius:5px; display:flex; justify-content:space-between;";
+                    d.innerHTML = `<span>${g.name}</span><button style="background:#00e676" onclick="playRemote('${child.key}')">JOGAR</button>`;
                     list.appendChild(d);
                 });
             });
@@ -257,18 +327,17 @@
 
         window.playRemote = function(id) {
             db.ref('games/' + id).once('value', snap => {
-                const xml = Blockly.Xml.textToDom(snap.val().data);
                 switchTab('editor');
-                runCode(xml);
+                runCode(Blockly.Xml.textToDom(snap.val().data));
             });
         };
 
-        function switchTab(tab) {
-            document.getElementById('blocklyDiv').style.display = tab === 'editor' ? 'block' : 'none';
-            document.getElementById('community-div').style.display = tab === 'community' ? 'block' : 'none';
-            document.getElementById('btn-editor').classList.toggle('active', tab === 'editor');
-            document.getElementById('btn-community').classList.toggle('active', tab === 'community');
-            if(tab === 'editor') Blockly.svgResize(workspace);
+        function switchTab(t) {
+            document.getElementById('blocklyDiv').style.display = t === 'editor' ? 'block' : 'none';
+            document.getElementById('community-div').style.display = t === 'community' ? 'block' : 'none';
+            document.getElementById('btn-editor').className = t === 'editor' ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('btn-community').className = t === 'community' ? 'tab-btn active' : 'tab-btn';
+            if(t === 'editor') Blockly.svgResize(workspace);
         }
 
         loadCommunity();
