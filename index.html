@@ -3,57 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Kids Code - Criador 3D</title>
+    <title>G-Block 3D Builder</title>
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; display: flex; }
-        #blocklyDiv { height: 100vh; width: 50%; }
-        #visualizer { height: 100vh; width: 50%; background: #111; }
-        #runBtn { 
-            position: absolute; bottom: 20px; right: 20px; 
-            padding: 15px 30px; background: #2ecc71; color: white; 
-            border: none; border-radius: 50px; cursor: pointer; font-size: 18px;
-            z-index: 100;
-        }
+        body { margin: 0; display: flex; height: 100vh; background: #222; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #blocklyDiv { width: 50%; height: 100%; border-right: 2px solid #444; }
+        #visualizer { width: 50%; height: 100%; position: relative; }
+        #ui-overlay { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 10px; }
+        button { padding: 10px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; transition: 0.3s; }
+        #runBtn { background: #27ae60; color: white; }
+        #runBtn:hover { background: #2ecc71; }
+        #clearBtn { background: #c0392b; color: white; }
     </style>
 </head>
 <body>
 
     <div id="blocklyDiv"></div>
-    <div id="visualizer"></div>
-    <button id="runBtn" onclick="runCode()">▶ Rodar Código</button>
+    <div id="visualizer">
+        <div id="ui-overlay">
+            <button id="clearBtn" onclick="clearScene()">Limpar Cena</button>
+            <button id="runBtn" onclick="runCode()">▶ Executar</button>
+        </div>
+    </div>
 
     <xml id="toolbox" style="display: none">
-        <category name="Criar" colour="#5C81A6">
+        <category name="Formas 3D" colour="#5C81A6">
             <block type="create_cube"></block>
             <block type="create_sphere"></block>
+            <block type="create_plane"></block>
         </category>
-        <category name="Transformar" colour="#A65C81">
-            <block type="move_object"></block>
-            <block type="rotate_object"></block>
+        <category name="Movimento" colour="#5CA672">
+            <block type="move_xyz"></block>
+            <block type="rotate_xyz"></block>
+            <block type="scale_obj"></block>
+        </category>
+        <category name="Estilo" colour="#A65C81">
+            <block type="set_color"></block>
+        </category>
+        <category name="Lógica" colour="#A6725C">
+            <block type="controls_repeat_ext">
+                <value name="TIMES">
+                    <shadow type="math_number">
+                        <field name="NUM">3</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="math_number"></block>
         </category>
     </xml>
 
     <script>
-        // --- 1. CONFIGURAÇÃO DO THREE.JS (O MUNDO 3D) ---
+        // --- MOTOR 3D (THREE.JS) ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x222222);
+        scene.background = new THREE.Color(0x1a1a1a);
         const camera = new THREE.PerspectiveCamera(75, (window.innerWidth/2) / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth / 2, window.innerHeight);
         document.getElementById('visualizer').appendChild(renderer.domElement);
 
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(5, 5, 5).normalize();
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040));
+        // Grid e Luzes
+        const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
+        scene.add(gridHelper);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 0.8);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
 
-        camera.position.z = 10;
-        camera.position.y = 5;
-        camera.lookAt(0,0,0);
+        camera.position.set(10, 10, 10);
+        camera.lookAt(0, 0, 0);
 
-        let objects = []; // Lista para limpar a cena ao rodar de novo
+        let objects = [];
+        let lastObj = null;
 
         function animate() {
             requestAnimationFrame(animate);
@@ -61,75 +83,134 @@
         }
         animate();
 
-        // --- 2. CONFIGURAÇÃO DO BLOCKLY (OS BLOCOS) ---
-        
-        // Bloco de Criar Cubo
-        Blockly.Blocks['create_cube'] = {
+        // --- DEFINIÇÃO DOS BLOCOS CUSTOMIZADOS ---
+
+        // Criar Formas
+        const createBlock = (name, label, color) => {
+            Blockly.Blocks[name] = {
+                init: function() {
+                    this.appendDummyInput().appendField(label);
+                    this.setPreviousStatement(true, null);
+                    this.setNextStatement(true, null);
+                    this.setColour(color);
+                }
+            };
+        };
+
+        createBlock('create_cube', '📦 Criar Cubo', 160);
+        createBlock('create_sphere', '🔮 Criar Esfera', 160);
+        createBlock('create_plane', '🏁 Criar Chão', 160);
+
+        // Movimento e Transformação
+        Blockly.Blocks['move_xyz'] = {
             init: function() {
-                this.appendDummyInput().appendField("Criar Cubo 🧊");
+                this.appendDummyInput().appendField("Mover p/ X:")
+                    .appendField(new Blockly.FieldNumber(0), "X")
+                    .appendField("Y:")
+                    .appendField(new Blockly.FieldNumber(0), "Y")
+                    .appendField("Z:")
+                    .appendField(new Blockly.FieldNumber(0), "Z");
                 this.setPreviousStatement(true, null);
                 this.setNextStatement(true, null);
-                this.setColour(230);
+                this.setColour(120);
             }
         };
 
-        // Bloco de Mover
-        Blockly.Blocks['move_object'] = {
+        Blockly.Blocks['rotate_xyz'] = {
             init: function() {
-                this.appendDummyInput()
-                    .appendField("Mover para X:")
+                this.appendDummyInput().appendField("Girar em X:")
                     .appendField(new Blockly.FieldNumber(0), "X");
                 this.setPreviousStatement(true, null);
                 this.setNextStatement(true, null);
-                this.setColour(290);
+                this.setColour(120);
             }
         };
 
-        // Geradores de Código JavaScript
-        javascript.javascriptGenerator.forBlock['create_cube'] = function(block) {
-            return 'addCube();\n';
-        };
-
-        javascript.javascriptGenerator.forBlock['move_object'] = function(block) {
-            const x = block.getFieldValue('X');
-            return `moveLastObject(${x});\n`;
-        };
-
-        // Funções que o código gerado vai chamar
-        function addCube() {
-            const geo = new THREE.BoxGeometry(2, 2, 2);
-            const mat = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
-            const cube = new THREE.Mesh(geo, mat);
-            scene.add(cube);
-            objects.push(cube);
-        }
-
-        function moveLastObject(x) {
-            if(objects.length > 0) {
-                objects[objects.length - 1].position.x = x;
+        Blockly.Blocks['set_color'] = {
+            init: function() {
+                this.appendDummyInput().appendField("Pintar de:")
+                    .appendField(new Blockly.FieldColour("#ff0000"), "COL");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(20);
             }
+        };
+
+        // --- GERADORES DE CÓDIGO ---
+        const javascriptGenerator = Blockly.JavaScript;
+
+        javascriptGenerator['create_cube'] = () => 'addObj("cube");\n';
+        javascriptGenerator['create_sphere'] = () => 'addObj("sphere");\n';
+        javascriptGenerator['create_plane'] = () => 'addObj("plane");\n';
+
+        javascriptGenerator['move_xyz'] = (block) => {
+            return `moveObj(${block.getFieldValue('X')}, ${block.getFieldValue('Y')}, ${block.getFieldValue('Z')});\n`;
+        };
+
+        javascriptGenerator['rotate_xyz'] = (block) => {
+            return `rotateObj(${block.getFieldValue('X')});\n`;
+        };
+
+        javascriptGenerator['set_color'] = (block) => {
+            return `colorObj("${block.getFieldValue('COL')}");\n`;
+        };
+
+        // --- FUNÇÕES DE EXECUÇÃO DO MUNDO 3D ---
+        function addObj(type) {
+            let geo;
+            if(type === "cube") geo = new THREE.BoxGeometry(2, 2, 2);
+            else if(type === "sphere") geo = new THREE.SphereGeometry(1.5, 32, 32);
+            else geo = new THREE.PlaneGeometry(5, 5);
+
+            const mat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+            const mesh = new THREE.Mesh(geo, mat);
+            if(type === "plane") mesh.rotation.x = -Math.PI / 2;
+            
+            scene.add(mesh);
+            objects.push(mesh);
+            lastObj = mesh;
         }
 
-        // Injetar Blockly
-        const workspace = Blockly.inject('blocklyDiv', {
-            toolbox: document.getElementById('toolbox'),
-            scrollbars: true
-        });
+        function moveObj(x, y, z) {
+            if(lastObj) lastObj.position.set(x, y, z);
+        }
 
-        // Execução
-        function runCode() {
-            // Limpa cena anterior
+        function rotateObj(deg) {
+            if(lastObj) lastObj.rotation.x += deg * (Math.PI / 180);
+        }
+
+        function colorObj(hex) {
+            if(lastObj) lastObj.material.color.set(hex);
+        }
+
+        function clearScene() {
             objects.forEach(obj => scene.remove(obj));
             objects = [];
-            
-            // Gera e executa o código
-            const code = javascript.javascriptGenerator.workspaceToCode(workspace);
+            lastObj = null;
+        }
+
+        // --- INICIALIZAÇÃO ---
+        const workspace = Blockly.inject('blocklyDiv', {
+            toolbox: document.getElementById('toolbox'),
+            zoom: { controls: true, wheel: true }
+        });
+
+        function runCode() {
+            clearScene();
+            const code = javascriptGenerator.workspaceToCode(workspace);
             try {
                 eval(code);
             } catch (e) {
-                console.error(e);
+                alert("Erro no código: " + e);
             }
         }
+
+        // Responsividade
+        window.addEventListener('resize', () => {
+            camera.aspect = (window.innerWidth/2) / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth / 2, window.innerHeight);
+        });
     </script>
 </body>
 </html>
